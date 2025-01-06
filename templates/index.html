@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Prediction</title>
+</head>
+<body>
+    <h1>Real-Time Webcam Prediction</h1>
+    <video id="webcam" autoplay playsinline></video>
+    <canvas id="snapshot" style="display: none;"></canvas>
+    <button id="predict-btn">Predict</button>
+    <p id="output">Prediction: </p>
+
+    <script>
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('snapshot');
+        const predictBtn = document.getElementById('predict-btn');
+        const output = document.getElementById('output');
+
+        // Access the webcam
+        async function setupCamera() {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            return new Promise((resolve) => {
+                video.onloadedmetadata = () => {
+                    resolve(video);
+                };
+            });
+        }
+
+        // Capture an image from the video feed
+        function captureImage() {
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL('image/jpeg');
+        }
+
+        // Send the image to the backend for prediction
+        predictBtn.addEventListener('click', async () => {
+            const image = captureImage();
+            const response = await fetch('/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image }),
+            });
+
+            const result = await response.json();
+            if (result.prediction !== undefined) {
+                output.innerText = `Prediction: ${result.prediction}`;
+            } else {
+                output.innerText = `Error: ${result.error}`;
+            }
+        });
+
+        // Start the webcam
+        setupCamera();
+    </script>
+</body>
+</html>
